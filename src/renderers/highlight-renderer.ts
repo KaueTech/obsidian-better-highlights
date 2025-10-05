@@ -1,6 +1,6 @@
 import { setIcon, TFile, Menu, Notice, moment } from 'obsidian';
 import type { Highlight } from '../../main';
-import type HighlightCommentsPlugin from '../../main';
+import type BetterHighlightPlugin from '../../main';
 
 export interface HighlightRenderOptions {
     searchTerm?: string;
@@ -20,7 +20,7 @@ export interface HighlightRenderOptions {
 }
 
 export class HighlightRenderer {
-    constructor(private plugin: HighlightCommentsPlugin) {}
+    constructor(private plugin: BetterHighlightPlugin) {}
 
     private createFileContextMenu(file: TFile): Menu {
         const menu = new Menu();

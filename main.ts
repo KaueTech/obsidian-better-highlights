@@ -3,6 +3,7 @@ import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Set
 import { HighlightsSidebarView } from './src/views/sidebar-view';
 import { InlineFootnoteManager } from './src/managers/inline-footnote-manager';
 import { ExcludedFilesModal } from './src/modals/excluded-files-modal';
+import { parseHighlightContent } from 'src/utils/colors';
 
 export interface Highlight {
     id: string;
@@ -105,7 +106,7 @@ const DEFAULT_SETTINGS: CommentPluginSettings = {
 
 const VIEW_TYPE_HIGHLIGHTS = 'highlights-sidebar';
 
-export default class HighlightCommentsPlugin extends Plugin {
+export default class BetterHighlightPlugin extends Plugin {
     settings: CommentPluginSettings;
     highlights: Map<string, Highlight[]> = new Map();
     collections: Map<string, Collection> = new Map();
@@ -1089,6 +1090,7 @@ export default class HighlightCommentsPlugin extends Plugin {
             return undefined;
         };
 
+        
         // Extract all footnotes from the content
         const footnoteMap = this.extractFootnotes(content);
 
@@ -1096,7 +1098,7 @@ export default class HighlightCommentsPlugin extends Plugin {
         const codeBlockRanges = this.getCodeBlockRanges(content);
 
         // Process all highlight types
-        const allMatches: Array<{match: RegExpExecArray, type: 'highlight' | 'comment' | 'html', color?: string}> = [];
+        const allMatches: Array<{match: RegExpExecArray, type: 'highlight' | 'comment' | 'html', text: string, color?: string}> = [];
         
         // Find all highlight matches
         let match;
@@ -1109,78 +1111,90 @@ export default class HighlightCommentsPlugin extends Plugin {
                 if (beforeMatch === '=' || afterMatch === '=') {
                     continue;
                 }
-                allMatches.push({match, type: 'highlight'});
+
+                // console.log("testeeeeeeee 1", match)
+
+                
+
+                const highlight = parseHighlightContent(match[0])
+
+
+                const text = highlight?.text || 'não parseou direito';
+                // match[1] = text;
+                // console.log("testeeeeeeee 2", highlight, match)
+                
+              allMatches.push({match, type: 'highlight', text, color: highlight?.color});
             }
         }
         
         // Find all comment matches
-        while ((match = commentHighlightRegex.exec(content)) !== null) {
-            // Skip if match is inside a code block
-            if (!this.isInsideCodeBlock(match.index, match.index + match[0].length, codeBlockRanges)) {
-                // Skip if this comment is surrounded by additional percent signs (e.g., %%%%%text%%%%% )
-                const beforeMatch = content.charAt(match.index - 1);
-                const afterMatch = content.charAt(match.index + match[0].length);
-                if (beforeMatch === '%' || afterMatch === '%') {
-                    continue;
-                }
-                allMatches.push({match, type: 'comment'});
-            }
-        }
+        // while ((match = commentHighlightRegex.exec(content)) !== null) {
+        //     // Skip if match is inside a code block
+        //     if (!this.isInsideCodeBlock(match.index, match.index + match[0].length, codeBlockRanges)) {
+        //         // Skip if this comment is surrounded by additional percent signs (e.g., %%%%%text%%%%% )
+        //         const beforeMatch = content.charAt(match.index - 1);
+        //         const afterMatch = content.charAt(match.index + match[0].length);
+        //         if (beforeMatch === '%' || afterMatch === '%') {
+        //             continue;
+        //         }
+        //         allMatches.push({match, type: 'comment'});
+        //     }
+        // }
         
-        // Find HTML span background matches
-        while ((match = spanBackgroundRegex.exec(content)) !== null) {
-            if (!this.isInsideCodeBlock(match.index, match.index + match[0].length, codeBlockRanges)) {
-                const color = this.parseHtmlColor(match[1]);
-                if (color) {
-                    // Create a modified match array with the text content
-                    const modifiedMatch: RegExpExecArray = Object.assign([], match);
-                    modifiedMatch[1] = match[2]; // Use the text content, not the color
-                    allMatches.push({match: modifiedMatch, type: 'html', color});
-                }
-            }
-        }
+        // // Find HTML span background matches
+        // while ((match = spanBackgroundRegex.exec(content)) !== null) {
+        //     if (!this.isInsideCodeBlock(match.index, match.index + match[0].length, codeBlockRanges)) {
+        //         const color = this.parseHtmlColor(match[1]);
+        //         if (color) {
+        //             // Create a modified match array with the text content
+        //             const modifiedMatch: RegExpExecArray = Object.assign([], match);
+        //             modifiedMatch[1] = match[2]; // Use the text content, not the color
+        //             allMatches.push({match: modifiedMatch, type: 'html', color});
+        //         }
+        //     }
+        // }
         
-        // Find HTML font color matches
-        while ((match = fontColorRegex.exec(content)) !== null) {
-            if (!this.isInsideCodeBlock(match.index, match.index + match[0].length, codeBlockRanges)) {
-                const color = this.parseHtmlColor(match[1]);
-                if (color) {
-                    // Create a modified match array with the text content
-                    const modifiedMatch: RegExpExecArray = Object.assign([], match);
-                    modifiedMatch[1] = match[2]; // Use the text content, not the color
-                    allMatches.push({match: modifiedMatch, type: 'html', color});
-                }
-            }
-        }
+        // // Find HTML font color matches
+        // while ((match = fontColorRegex.exec(content)) !== null) {
+        //     if (!this.isInsideCodeBlock(match.index, match.index + match[0].length, codeBlockRanges)) {
+        //         const color = this.parseHtmlColor(match[1]);
+        //         if (color) {
+        //             // Create a modified match array with the text content
+        //             const modifiedMatch: RegExpExecArray = Object.assign([], match);
+        //             modifiedMatch[1] = match[2]; // Use the text content, not the color
+        //             allMatches.push({match: modifiedMatch, type: 'html', color});
+        //         }
+        //     }
+        // }
         
         // Find HTML mark tag matches
-        while ((match = markTagRegex.exec(content)) !== null) {
-            if (!this.isInsideCodeBlock(match.index, match.index + match[0].length, codeBlockRanges)) {
-                // Create a modified match array with the text content
-                const modifiedMatch: RegExpExecArray = Object.assign([], match);
-                modifiedMatch[1] = match[1]; // Use the text content
-                allMatches.push({match: modifiedMatch, type: 'html', color: '#ffff00'}); // Default yellow for <mark>
-            }
-        }
+        // while ((match = markTagRegex.exec(content)) !== null) {
+        //     if (!this.isInsideCodeBlock(match.index, match.index + match[0].length, codeBlockRanges)) {
+        //         // Create a modified match array with the text content
+        //         const modifiedMatch: RegExpExecArray = Object.assign([], match);
+        //         modifiedMatch[1] = match[1]; // Use the text content
+        //         allMatches.push({match: modifiedMatch, type: 'html', color: '#ffff00'}); // Default yellow for <mark>
+        //     }
+        // }
         
         // Find HTML span class matches
-        while ((match = spanClassRegex.exec(content)) !== null) {
-            if (!this.isInsideCodeBlock(match.index, match.index + match[0].length, codeBlockRanges)) {
-                const className = match[1].trim();
-                const color = this.getCssClassColor(className);
-                if (color) {
-                    // Create a modified match array with the text content
-                    const modifiedMatch: RegExpExecArray = Object.assign([], match);
-                    modifiedMatch[1] = match[2]; // Use the text content, not the class name
-                    allMatches.push({match: modifiedMatch, type: 'html', color});
-                }
-            }
-        }
+        // while ((match = spanClassRegex.exec(content)) !== null) {
+        //     if (!this.isInsideCodeBlock(match.index, match.index + match[0].length, codeBlockRanges)) {
+        //         const className = match[1].trim();
+        //         const color = this.getCssClassColor(className);
+        //         if (color) {
+        //             // Create a modified match array with the text content
+        //             const modifiedMatch: RegExpExecArray = Object.assign([], match);
+        //             modifiedMatch[1] = match[2]; // Use the text content, not the class name
+        //             allMatches.push({match: modifiedMatch, type: 'html', color});
+        //         }
+        //     }
+        // }
         
         // Sort matches by position in content
         allMatches.sort((a, b) => a.match.index - b.match.index);
 
-        allMatches.forEach(({match, type, color}) => {
+        allMatches.forEach(({match, type, text, color}) => {
             const [, highlightText] = match;
             
             // Skip empty or whitespace-only highlights
@@ -1275,7 +1289,8 @@ export default class HighlightCommentsPlugin extends Plugin {
                     footnoteContents: footnoteContents,
                     isNativeComment: type === 'comment',
                     // Update color for HTML highlights, preserve existing for others
-                    color: type === 'html' ? color : existingHighlight.color,
+                    // color: type === 'html' ? color : existingHighlight.color,
+                    color: color || existingHighlight.color,
                     // Preserve existing createdAt timestamp if it exists
                     createdAt: existingHighlight.createdAt || Date.now(),
                     // Store the type for proper identification
@@ -1298,7 +1313,7 @@ export default class HighlightCommentsPlugin extends Plugin {
                     createdAt: uniqueTimestamp,
                     isNativeComment: type === 'comment',
                     // Set color for HTML highlights
-                    color: type === 'html' ? color : undefined,
+                    color: color,
                     // Store the type for proper identification
                     type: type
                 });
@@ -1633,9 +1648,9 @@ export default class HighlightCommentsPlugin extends Plugin {
 }
 
 class HighlightSettingTab extends PluginSettingTab {
-    plugin: HighlightCommentsPlugin;
+    plugin: BetterHighlightPlugin;
 
-    constructor(app: App, plugin: HighlightCommentsPlugin) {
+    constructor(app: App, plugin: BetterHighlightPlugin) {
         super(app, plugin);
         this.plugin = plugin;
     }
@@ -2018,9 +2033,9 @@ class HighlightSettingTab extends PluginSettingTab {
 }
 
 class CollectionsManager {
-    private plugin: HighlightCommentsPlugin;
+    private plugin: BetterHighlightPlugin;
 
-    constructor(plugin: HighlightCommentsPlugin) {
+    constructor(plugin: BetterHighlightPlugin) {
         this.plugin = plugin;
     }
 
