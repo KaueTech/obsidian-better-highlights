@@ -217,38 +217,38 @@ export class HighlightsSidebarView extends ItemView {
                 menu.showAtMouseEvent(event);
             });
 
-            // Add toggle native comments button (positioned after group button)
-            const nativeCommentsToggleButton = searchContainer.createEl('button', {
-                cls: 'highlights-group-button'
-            });
-            setTooltip(nativeCommentsToggleButton, 'Toggle native comments');
-            this.updateNativeCommentsToggleState(nativeCommentsToggleButton);
-            nativeCommentsToggleButton.addEventListener('click', () => {
-                this.toggleNativeCommentsVisibility();
-                this.updateNativeCommentsToggleState(nativeCommentsToggleButton);
-                this.renderContent();
-            });
+            // // Add toggle native comments button (positioned after group button)
+            // const nativeCommentsToggleButton = searchContainer.createEl('button', {
+            //     cls: 'highlights-group-button'
+            // });
+            // setTooltip(nativeCommentsToggleButton, 'Toggle native comments');
+            // this.updateNativeCommentsToggleState(nativeCommentsToggleButton);
+            // nativeCommentsToggleButton.addEventListener('click', () => {
+            //     this.toggleNativeCommentsVisibility();
+            //     this.updateNativeCommentsToggleState(nativeCommentsToggleButton);
+            //     this.renderContent();
+            // });
 
-            const commentsToggleButton = searchContainer.createEl('button', {
-                cls: 'highlights-group-button'
-            });
-            setTooltip(commentsToggleButton, 'Toggle highlight comments');
-            this.commentsToggleButton = commentsToggleButton;
-            this.updateCommentsToggleIcon(commentsToggleButton);
-            commentsToggleButton.addEventListener('click', () => {
-                this.toggleAllComments();
-                this.updateCommentsToggleIcon(commentsToggleButton);
-                this.renderContent(); // Use renderContent instead of renderFilteredList
-            });
+            // const commentsToggleButton = searchContainer.createEl('button', {
+            //     cls: 'highlights-group-button'
+            // });
+            // setTooltip(commentsToggleButton, 'Toggle highlight comments');
+            // this.commentsToggleButton = commentsToggleButton;
+            // this.updateCommentsToggleIcon(commentsToggleButton);
+            // commentsToggleButton.addEventListener('click', () => {
+            //     this.toggleAllComments();
+            //     this.updateCommentsToggleIcon(commentsToggleButton);
+            //     this.renderContent(); // Use renderContent instead of renderFilteredList
+            // });
 
-            const resetColorsButton = searchContainer.createEl('button', {
-                cls: 'highlights-group-button'
-            });
-            setTooltip(resetColorsButton, 'Revert highlight colors');
-            setIcon(resetColorsButton, 'rotate-ccw');
-            resetColorsButton.addEventListener('click', () => {
-                this.resetAllColors();
-            });
+            // const resetColorsButton = searchContainer.createEl('button', {
+            //     cls: 'highlights-group-button'
+            // });
+            // setTooltip(resetColorsButton, 'Revert highlight colors');
+            // setIcon(resetColorsButton, 'rotate-ccw');
+            // resetColorsButton.addEventListener('click', () => {
+            //     this.resetAllColors();
+            // });
 
             const tagFilterButton = searchContainer.createEl('button', {
                 cls: 'highlights-group-button highlights-tag-filter-button'
