@@ -8,6 +8,7 @@ import { parseHighlightContent } from 'src/utils/colors';
 export interface Highlight {
     id: string;
     text: string;
+    viewText: string;
     tags: string[];
     line: number;
     startOffset: number;
@@ -467,6 +468,7 @@ export default class BetterHighlightPlugin extends Plugin {
         const highlight: Highlight = {
             id: highlightId,
             text: selection,
+            viewText: selection,
             tags: [],
             line: fromCursor.line,
             startOffset: fromOffset,
@@ -1194,7 +1196,7 @@ export default class BetterHighlightPlugin extends Plugin {
         // Sort matches by position in content
         allMatches.sort((a, b) => a.match.index - b.match.index);
 
-        allMatches.forEach(({match, type, text, color}) => {
+        allMatches.forEach(({match, type, text: viewText, color}) => {
             const [, highlightText] = match;
             
             // Skip empty or whitespace-only highlights
@@ -1277,10 +1279,12 @@ export default class BetterHighlightPlugin extends Plugin {
                 footnoteContents = [highlightText];
                 footnoteCount = 1;
             }
+
             
             if (existingHighlight) {
                 newHighlights.push({
                     ...existingHighlight,
+                    viewText: viewText,
                     line: lineNumber,
                     startOffset: match.index,
                     endOffset: match.index + match[0].length,
@@ -1303,6 +1307,7 @@ export default class BetterHighlightPlugin extends Plugin {
                 newHighlights.push({
                     id: this.generateId(),
                     text: highlightText,
+                    viewText: viewText,
                     tags: [],
                     line: lineNumber,
                     startOffset: match.index,
@@ -1321,8 +1326,8 @@ export default class BetterHighlightPlugin extends Plugin {
         });
 
         // Check for actual changes before updating and refreshing
-        const oldHighlightsJSON = JSON.stringify(existingHighlightsForFile.map(h => ({id: h.id, start: h.startOffset, end: h.endOffset, text: h.text, footnotes: h.footnoteCount, contents: h.footnoteContents?.filter(c => c.trim() !== ''), color: h.color, isNativeComment: h.isNativeComment})));
-        const newHighlightsJSON = JSON.stringify(newHighlights.map(h => ({id: h.id, start: h.startOffset, end: h.endOffset, text: h.text, footnotes: h.footnoteCount, contents: h.footnoteContents?.filter(c => c.trim() !== ''), color: h.color, isNativeComment: h.isNativeComment})));
+        const oldHighlightsJSON = JSON.stringify(existingHighlightsForFile.map(h => ({id: h.id, start: h.startOffset, end: h.endOffset, text: h.text, viewText: h.viewText, footnotes: h.footnoteCount, contents: h.footnoteContents?.filter(c => c.trim() !== ''), color: h.color, isNativeComment: h.isNativeComment})));
+        const newHighlightsJSON = JSON.stringify(newHighlights.map(h => ({id: h.id, start: h.startOffset, end: h.endOffset, text: h.text, viewText: h.viewText, footnotes: h.footnoteCount, contents: h.footnoteContents?.filter(c => c.trim() !== ''), color: h.color, isNativeComment: h.isNativeComment})));
 
         if (oldHighlightsJSON !== newHighlightsJSON) {
             this.highlights.set(file.path, newHighlights);

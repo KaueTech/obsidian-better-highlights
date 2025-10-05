@@ -105,7 +105,8 @@ export class HighlightRenderer {
 
     private createQuoteSection(item: HTMLElement, highlight: Highlight, options: HighlightRenderOptions): void {
         const quoteEl = item.createDiv({ cls: 'highlight-quote' });
-        this.renderMarkdownToElement(quoteEl, highlight.text);
+
+        this.renderMarkdownToElement(quoteEl, highlight.viewText );
 
         if (options.searchTerm && options.searchTerm.length > 0) {
             this.highlightSearchMatches(quoteEl, options.searchTerm);
