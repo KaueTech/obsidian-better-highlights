@@ -3,12 +3,12 @@ import { App, Editor, MarkdownView, Modal, Notice, Plugin, PluginSettingTab, Set
 import { HighlightsSidebarView } from './src/views/sidebar-view';
 import { InlineFootnoteManager } from './src/managers/inline-footnote-manager';
 import { ExcludedFilesModal } from './src/modals/excluded-files-modal';
-import { parseHighlightContent } from 'src/utils/colors';
+import { HighlightStyle, parseHighlightContent } from 'src/utils/colors';
 
 export interface Highlight {
     id: string;
     text: string;
-    viewText: string;
+
     tags: string[];
     line: number;
     startOffset: number;
@@ -16,7 +16,7 @@ export interface Highlight {
     filePath: string;
     footnoteCount?: number;
     footnoteContents?: string[];
-    color?: string;
+    style?: HighlightStyle;
     collectionIds?: string[]; // Add collection support
     createdAt?: number; // Timestamp when highlight was created
     isNativeComment?: boolean; // True if this is a native comment (%% %) rather than highlight (== ==)
@@ -468,7 +468,9 @@ export default class BetterHighlightPlugin extends Plugin {
         const highlight: Highlight = {
             id: highlightId,
             text: selection,
-            viewText: selection,
+            style: {
+                text: selection,
+            },
             tags: [],
             line: fromCursor.line,
             startOffset: fromOffset,
@@ -1100,7 +1102,7 @@ export default class BetterHighlightPlugin extends Plugin {
         const codeBlockRanges = this.getCodeBlockRanges(content);
 
         // Process all highlight types
-        const allMatches: Array<{match: RegExpExecArray, type: 'highlight' | 'comment' | 'html', text: string, color?: string}> = [];
+        const allMatches: Array<{match: RegExpExecArray, type: 'highlight' | 'comment' | 'html', color?: HighlightStyle}> = [];
         
         // Find all highlight matches
         let match;
@@ -1118,14 +1120,11 @@ export default class BetterHighlightPlugin extends Plugin {
 
                 
 
-                const highlight = parseHighlightContent(match[0])
+                const color = parseHighlightContent(match[0])
 
 
-                const text = highlight?.text || 'não parseou direito';
-                // match[1] = text;
-                // console.log("testeeeeeeee 2", highlight, match)
                 
-              allMatches.push({match, type: 'highlight', text, color: highlight?.color});
+              allMatches.push({match, type: 'highlight', color});
             }
         }
         
@@ -1196,8 +1195,19 @@ export default class BetterHighlightPlugin extends Plugin {
         // Sort matches by position in content
         allMatches.sort((a, b) => a.match.index - b.match.index);
 
-        allMatches.forEach(({match, type, text: viewText, color}) => {
+        const metadata = this.app.metadataCache.getFileCache(file);
+        const props = metadata?.frontmatter || {};
+
+
+
+        allMatches.forEach(({match, type, color: highlightColor}) => {
             const [, highlightText] = match;
+
+            if (highlightColor?.colorName) {
+                const key = `highlight-${highlightColor?.colorName}`;
+                highlightColor.title = props.hasOwnProperty(key) ? props[key] : '';
+            }
+    
             
             // Skip empty or whitespace-only highlights
             if (!highlightText || highlightText.trim() === '') {
@@ -1284,7 +1294,7 @@ export default class BetterHighlightPlugin extends Plugin {
             if (existingHighlight) {
                 newHighlights.push({
                     ...existingHighlight,
-                    viewText: viewText,
+                    style: highlightColor || existingHighlight.style,
                     line: lineNumber,
                     startOffset: match.index,
                     endOffset: match.index + match[0].length,
@@ -1294,7 +1304,6 @@ export default class BetterHighlightPlugin extends Plugin {
                     isNativeComment: type === 'comment',
                     // Update color for HTML highlights, preserve existing for others
                     // color: type === 'html' ? color : existingHighlight.color,
-                    color: color || existingHighlight.color,
                     // Preserve existing createdAt timestamp if it exists
                     createdAt: existingHighlight.createdAt || Date.now(),
                     // Store the type for proper identification
@@ -1307,7 +1316,7 @@ export default class BetterHighlightPlugin extends Plugin {
                 newHighlights.push({
                     id: this.generateId(),
                     text: highlightText,
-                    viewText: viewText,
+                    style: highlightColor,
                     tags: [],
                     line: lineNumber,
                     startOffset: match.index,
@@ -1317,17 +1326,14 @@ export default class BetterHighlightPlugin extends Plugin {
                     footnoteContents: footnoteContents,
                     createdAt: uniqueTimestamp,
                     isNativeComment: type === 'comment',
-                    // Set color for HTML highlights
-                    color: color,
-                    // Store the type for proper identification
                     type: type
                 });
             }
         });
 
         // Check for actual changes before updating and refreshing
-        const oldHighlightsJSON = JSON.stringify(existingHighlightsForFile.map(h => ({id: h.id, start: h.startOffset, end: h.endOffset, text: h.text, viewText: h.viewText, footnotes: h.footnoteCount, contents: h.footnoteContents?.filter(c => c.trim() !== ''), color: h.color, isNativeComment: h.isNativeComment})));
-        const newHighlightsJSON = JSON.stringify(newHighlights.map(h => ({id: h.id, start: h.startOffset, end: h.endOffset, text: h.text, viewText: h.viewText, footnotes: h.footnoteCount, contents: h.footnoteContents?.filter(c => c.trim() !== ''), color: h.color, isNativeComment: h.isNativeComment})));
+        const oldHighlightsJSON = JSON.stringify(existingHighlightsForFile.map(h => ({id: h.id, start: h.startOffset, end: h.endOffset, text: h.text, footnotes: h.footnoteCount, contents: h.footnoteContents?.filter(c => c.trim() !== ''), color: h.style, isNativeComment: h.isNativeComment})));
+        const newHighlightsJSON = JSON.stringify(newHighlights.map(h => ({id: h.id, start: h.startOffset, end: h.endOffset, text: h.text, footnotes: h.footnoteCount, contents: h.footnoteContents?.filter(c => c.trim() !== ''), color: h.style, isNativeComment: h.isNativeComment})));
 
         if (oldHighlightsJSON !== newHighlightsJSON) {
             this.highlights.set(file.path, newHighlights);
@@ -1373,14 +1379,14 @@ export default class BetterHighlightPlugin extends Plugin {
                         text: oldHighlight.text, 
                         footnotes: oldHighlight.footnoteCount, 
                         contents: oldHighlight.footnoteContents?.filter(c => c.trim() !== ''), 
-                        color: oldHighlight.color,
+                        color: oldHighlight.style,
                         isNativeComment: oldHighlight.isNativeComment
                     });
                     const newJSON = JSON.stringify({
                         text: newHighlight.text, 
                         footnotes: newHighlight.footnoteCount, 
                         contents: newHighlight.footnoteContents?.filter(c => c.trim() !== ''), 
-                        color: newHighlight.color,
+                        color: newHighlight.style,
                         isNativeComment: newHighlight.isNativeComment
                     });
                     

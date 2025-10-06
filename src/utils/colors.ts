@@ -1,6 +1,8 @@
-interface HighlightColor {
-  color?: string;
-  text: string;
+export interface HighlightStyle {
+  color?: string;      // cor resolvida (hex ou rgba)
+  colorName?: string;  // o que estava dentro das chaves { }
+  title?: string;
+  text: string;        // texto destacado
 }
 
 export function getHighlightColorList() {
@@ -16,46 +18,55 @@ export function getHighlightColorList() {
   ];
 }
 
-export function parseHighlightContent(content: string): HighlightColor {
+export function parseHighlightContent(content: string): HighlightStyle {
   try {
-    // Aceita =={cor}texto==, =={}texto== ou ==texto==
+    // aceita =={cor}texto==, =={}texto== ou ==texto==
     const match = content.match(/^==(?:\{([^}]*)\})?([\s\S]+?)==$/);
-    if (!match) return {
-      text: content,
-    };
+    if (!match) {
+      return { text: content.trim() };
+    }
 
     const [, colorKey = "", textRaw = ""] = match;
-    const colorList = getHighlightColorList();
-
     const colorKeyTrimmed = colorKey.trim();
     const text = textRaw.trim();
+    const colorList = getHighlightColorList();
 
+    // Se não tiver nada dentro das chaves → cor indefinida
     if (!colorKeyTrimmed) {
-      // sem cor especificada → null
-      return { color: undefined, text };
+      return { color: undefined, colorName: undefined, text };
     }
 
     // tenta cor predefinida
     const predefined = colorList.find((c) => c.tag === colorKeyTrimmed);
     if (predefined) {
-      return { color: predefined.color, text };
+      return {
+        color: predefined.color,
+        colorName: colorKeyTrimmed,
+        text,
+      };
     }
 
-    // tenta RGBA direta
+    // tenta RGBA
     const rgbaMatch = colorKeyTrimmed.match(
       /^(\d+),\s*(\d+),\s*(\d+),\s*(\d*(?:\.\d+)?)$/
     );
     if (rgbaMatch) {
       const [_, r, g, b, a] = rgbaMatch;
-      return { color: `rgba(${r},${g},${b},${a})`, text };
+      return {
+        color: `rgba(${r},${g},${b},${a})`,
+        colorName: colorKeyTrimmed,
+        text,
+      };
     }
 
-    // se nada deu match, cor nula
-    return { color: undefined, text };
+    // se não reconheceu a cor, ainda retorna o nome cru
+    return {
+      color: undefined,
+      colorName: colorKeyTrimmed,
+      text,
+    };
   } catch (err) {
     console.error("parseHighlightContent error:", err);
-    return {
-      text: content,
-    };
+    return { text: content.trim() };
   }
 }

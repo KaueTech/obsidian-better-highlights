@@ -11,7 +11,7 @@ export class InlineFootnoteManager {
     
     private isHtmlHighlight(highlight: Highlight): boolean {
         // HTML highlights have a color property and are not native comments
-        return !highlight.isNativeComment && !!highlight.color;
+        return !highlight.isNativeComment && !!highlight.style;
     }
 
     private getHtmlHighlightPatterns(highlight: Highlight): Array<{pattern: string}> {

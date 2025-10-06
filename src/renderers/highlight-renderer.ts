@@ -72,7 +72,7 @@ export class HighlightRenderer {
             item.classList.add('highlight-native-comment');
         } else {
             // Regular highlights get color styling
-            const highlightColor = highlight.color || this.plugin.settings.highlightColor;
+            const highlightColor = highlight.style?.color || this.plugin.settings.highlightColor;
             const colorClass = this.getColorClassName(highlightColor);
             
             // Apply color class for border styling
@@ -106,7 +106,9 @@ export class HighlightRenderer {
     private createQuoteSection(item: HTMLElement, highlight: Highlight, options: HighlightRenderOptions): void {
         const quoteEl = item.createDiv({ cls: 'highlight-quote' });
 
-        this.renderMarkdownToElement(quoteEl, highlight.viewText );
+        const title = highlight.style?.title
+
+        this.renderMarkdownToElement(quoteEl, highlight.style?.text || highlight.text, title );
 
         if (options.searchTerm && options.searchTerm.length > 0) {
             this.highlightSearchMatches(quoteEl, options.searchTerm);
@@ -377,12 +379,22 @@ export class HighlightRenderer {
 
 
     // Safe DOM-based rendering method to replace innerHTML usage
-    private renderMarkdownToElement(element: HTMLElement, text: string): void {
+    private renderMarkdownToElement(element: HTMLElement, text: string, title?: string): void {
         element.empty(); // Clear existing content
         
         // Process markdown patterns safely (no HTML escaping needed since textContent handles it)
         const segments = this.parseMarkdownSegments(text);
         
+        if (title) {
+            const titleEl = element.createEl('strong')
+            titleEl.textContent = title
+            const divider = element.createEl('div')
+            
+            divider.style.borderBottom = '1px solid var(--hr-color, rgba(255,255,255,0.1))';
+            divider.style.margin = '6px 0';
+        }
+
+    
         for (const segment of segments) {
             if (segment.type === 'text') {
                 element.appendText(segment.content || '');

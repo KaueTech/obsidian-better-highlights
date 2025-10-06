@@ -7,6 +7,7 @@ import { HighlightRenderer, HighlightRenderOptions } from '../renderers/highligh
 import { InlineFootnoteManager } from '../managers/inline-footnote-manager';
 import { SearchParser, SearchToken, ParsedSearch, ASTNode, OperatorNode, FilterNode, TextNode } from '../utils/search-parser';
 import { SimpleSearchManager } from '../managers/simple-search-manager';
+import { HighlightStyle } from 'src/utils/colors';
 
 const VIEW_TYPE_HIGHLIGHTS = 'highlights-sidebar';
 
@@ -25,6 +26,8 @@ export class HighlightsSidebarView extends ItemView {
     private currentCollectionId: string | null = null;
     private preservedScrollTop: number = 0;
     private isHighlightFocusing: boolean = false;
+
+    private currentColorTitles: Map<string, string> = new Map();
     
     // Pagination for "All Notes" performance
     private currentPage: number = 0;
@@ -533,7 +536,7 @@ export class HighlightsSidebarView extends ItemView {
     }
 
     private applyHighlightColorStyling(element: HTMLElement, highlight: Highlight) {
-        const highlightColor = highlight.color || this.plugin.settings.highlightColor;
+        const highlightColor = highlight.style?.color || this.plugin.settings.highlightColor;
         element.style.borderLeftColor = highlightColor;
         if (!highlight.isNativeComment) {
             element.style.boxShadow = `0 0 0 1.5px ${highlightColor}, var(--shadow-s)`;
@@ -1006,7 +1009,7 @@ export class HighlightsSidebarView extends ItemView {
             let groupKey: string;
             
             if (this.groupingMode === 'color') {
-                const color = highlight.color || this.plugin.settings.highlightColor;
+                const color = highlight.style?.color || this.plugin.settings.highlightColor;
                 groupKey = color;
                 groupColors.set(groupKey, color);
             } else if (this.groupingMode === 'comments-asc' || this.groupingMode === 'comments-desc') {
@@ -1404,7 +1407,10 @@ export class HighlightsSidebarView extends ItemView {
                     this.isColorChanging = false;
                 }, 2000);
                 
-                this.changeHighlightColor(highlight, color);
+                this.changeHighlightColor(highlight, {
+                    text: highlight.style?.text || '',
+                    color,
+                });
                 this.rerenderCurrentView();
                 
                 // Restore scroll position after DOM rebuild and clear flag
@@ -1420,7 +1426,7 @@ export class HighlightsSidebarView extends ItemView {
                                 // Find the highlight data to get the updated color
                                 const selectedHighlight = this.getHighlightById(this.plugin.selectedHighlightId);
                                 if (selectedHighlight) {
-                                    const highlightColor = selectedHighlight.color || this.plugin.settings.highlightColor;
+                                    const highlightColor = selectedHighlight.style?.color || this.plugin.settings.highlightColor;
                                     selectedEl.style.borderLeftColor = highlightColor;
                                     if (!selectedHighlight.isNativeComment) {
                                         selectedEl.style.boxShadow = `0 0 0 1.5px ${highlightColor}, var(--shadow-s)`;
@@ -1798,7 +1804,7 @@ export class HighlightsSidebarView extends ItemView {
                 newEl.classList.add('highlight-selected');
                 
                 // Update border color and box-shadow to reflect current color
-                const highlightColor = newHighlight.color || this.plugin.settings.highlightColor;
+                const highlightColor = newHighlight.style?.color || this.plugin.settings.highlightColor;
                 newEl.style.borderLeftColor = highlightColor;
                 if (!newHighlight.isNativeComment) {
                     newEl.style.boxShadow = `0 0 0 1.5px ${highlightColor}, var(--shadow-s)`;
@@ -2234,9 +2240,9 @@ export class HighlightsSidebarView extends ItemView {
         }, 150);
     }
 
-    private changeHighlightColor(highlight: Highlight, color: string) {
+    private changeHighlightColor(highlight: Highlight, color: HighlightStyle) {
         // Update the highlight color
-        this.plugin.updateHighlight(highlight.id, { color: color }, highlight.filePath);
+        // this.plugin.updateHighlight(highlight.id, { color: color }, highlight.filePath);
     }
 
     private getColorName(hex: string): string {
@@ -2274,7 +2280,7 @@ export class HighlightsSidebarView extends ItemView {
             let groupKey: string;
             
             if (this.groupingMode === 'color') {
-                const color = highlight.color || this.plugin.settings.highlightColor;
+                const color = highlight.style?.color || this.plugin.settings.highlightColor;
                 groupKey = color; // Use hex code directly instead of color name
                 groupColors.set(groupKey, color); // Store the hex color
             } else if (this.groupingMode === 'comments-asc' || this.groupingMode === 'comments-desc') {
@@ -2570,12 +2576,12 @@ export class HighlightsSidebarView extends ItemView {
         let hasChanges = false;
         
         highlightsToReset.forEach(highlight => {
-            if (highlight.color) {
+            if (highlight.style) {
                 // Find the actual file path for the highlight to update it correctly
                 const fileHighlights = this.plugin.highlights.get(highlight.filePath);
                 if (fileHighlights) {
                     const targetHighlight = fileHighlights.find(h => h.id === highlight.id);
-                    if (targetHighlight && targetHighlight.color) {
+                    if (targetHighlight && targetHighlight.style) {
                         // Create a new object for the update to ensure reactivity if needed
                         const updatedHighlight = { ...targetHighlight, color: undefined };
                         // Update in the main plugin's highlights map
